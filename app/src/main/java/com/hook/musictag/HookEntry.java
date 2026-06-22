@@ -110,32 +110,31 @@ public class HookEntry extends XposedModule {
 
     private void hookGetString(ClassLoader cl) {
         try {
-            // Hook Context.getString(int) - 动态查找资源 ID
+            // Hook Context.getString(int) - 检查结果是否包含 "音乐标签"
             Method getString = android.content.Context.class.getMethod("getString", int.class);
             hook(getString).intercept(chain -> {
-                try {
-                    Context ctx = (Context) chain.getThisObject();
-                    if (ctx != null) {
-                        int targetId = ctx.getResources().getIdentifier(
-                                "use_music_tag_app_editing", "string", SALT_PKG);
-                        int id = (int) chain.getArgs().get(0);
-                        if (targetId != 0 && id == targetId) {
-                            String result = (String) chain.proceed();
-                            if (result != null && result.contains(OLD_APP_NAME)) {
-                                String replaced = result.replace(OLD_APP_NAME, NEW_APP_NAME);
-                                Log.d(TAG, ">>> getString replaced: " + result + " -> " + replaced);
-                                return replaced;
-                            }
-                            return result;
-                        }
-                    }
-                } catch (Throwable e) {
-                    Log.w(TAG, "getString hook error: " + e.getMessage());
+                String result = (String) chain.proceed();
+                if (result != null && result.contains(OLD_APP_NAME)) {
+                    String replaced = result.replace(OLD_APP_NAME, NEW_APP_NAME);
+                    Log.d(TAG, ">>> getString replaced: " + result + " -> " + replaced);
+                    return replaced;
                 }
-                return chain.proceed();
+                return result;
             });
 
-            Log.i(TAG, "Hook installed: Context.getString (via getIdentifier)");
+            // Hook Context.getString(int, Object...) - 带格式化参数的版本
+            Method getStringVarargs = android.content.Context.class.getMethod("getString", int.class, Object[].class);
+            hook(getStringVarargs).intercept(chain -> {
+                String result = (String) chain.proceed();
+                if (result != null && result.contains(OLD_APP_NAME)) {
+                    String replaced = result.replace(OLD_APP_NAME, NEW_APP_NAME);
+                    Log.d(TAG, ">>> getStringVarargs replaced: " + result + " -> " + replaced);
+                    return replaced;
+                }
+                return result;
+            });
+
+            Log.i(TAG, "Hook installed: Context.getString (content-based)");
         } catch (Throwable e) {
             Log.e(TAG, "Failed to hook getString: " + e.getMessage(), e);
         }
