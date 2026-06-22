@@ -4,14 +4,13 @@ Xposed 模块，将椒盐音乐（SaltPlayer）的「使用音乐标签应用编
 
 ## 功能
 
-- 将椒盐音乐中「使用音乐标签应用编辑」的跳转目标从 `com.xjcheng.musictageditor` 重定向到 `com.lonx.lyrico`
-- 当音乐标签编辑器未安装时自动跳转 Lyrico，已安装时保持原行为
+- 将椒盐音乐中「使用音乐标签应用编辑」的跳转目标重定向到 Lyrico
 - 自动补全 intent 的 MIME type（`audio/*`）和 URI 读取权限，确保 Lyrico 能正确打开音频文件
 
 ## 环境要求
 
 - Android 设备已 Root
-- LSPosed 2.0+（支持 libxposed API 102）
+- LSPosed 2.0+（支持 libxposed API 101）
 - 椒盐音乐已安装
 - Lyrico 已安装
 

@@ -3,7 +3,6 @@ package com.hook.musictag;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.lang.reflect.Method;
@@ -15,8 +14,6 @@ public class HookEntry extends XposedModule {
 
     private static final String TAG = "LyricoBridge";
     private static final String SALT_PKG = "com.salt.music";
-    private static final String OLD_PKG = "com.xjcheng.musictageditor";
-    private static final String OLD_CLASS = "com.xjcheng.musictageditor.SongDetailActivity";
     private static final String NEW_PKG = "com.lonx.lyrico";
     private static final String NEW_CLASS = "com.lonx.lyrico.MainActivity";
 
@@ -217,29 +214,9 @@ public class HookEntry extends XposedModule {
         String cls = component.getClassName();
         Log.d(TAG, "Intent component: " + pkg + "/" + cls);
 
-        if (!OLD_PKG.equals(pkg)) return;
-        if (!OLD_CLASS.equals(cls)) return;
+        if (!SALT_PKG.equals(pkg)) return;
 
-        Object thisObj = chain.getThisObject();
-        if (!(thisObj instanceof Context)) return;
-
-        Context context = (Context) thisObj;
-        PackageManager pm = context.getPackageManager();
-
-        boolean oldAppInstalled;
-        try {
-            pm.getPackageInfo(OLD_PKG, 0);
-            oldAppInstalled = true;
-        } catch (PackageManager.NameNotFoundException e) {
-            oldAppInstalled = false;
-        }
-
-        if (oldAppInstalled) {
-            Log.i(TAG, OLD_PKG + " is installed, keeping original");
-            return;
-        }
-
-        Log.i(TAG, "REDIRECTING: " + OLD_PKG + " -> " + NEW_PKG);
+        Log.i(TAG, "REDIRECTING to " + NEW_PKG);
         Log.i(TAG, "  Action: " + intent.getAction());
         Log.i(TAG, "  Data: " + intent.getData());
         Log.i(TAG, "  Type: " + intent.getType());
