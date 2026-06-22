@@ -211,9 +211,8 @@ public class HookEntry extends XposedModule {
 
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
-        // 确保 MIME type 为 audio/*
         if (intent.getData() != null) {
-            intent.setType("audio/*");
+            intent.setDataAndType(intent.getData(), "audio/*");
         }
 
         intent.addFlags(GRANT_URI_PERMISSION);
