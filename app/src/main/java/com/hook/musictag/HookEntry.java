@@ -110,65 +110,35 @@ public class HookEntry extends XposedModule {
 
     private void hookGetString(ClassLoader cl) {
         try {
-            // 用反射动态查找包含 use_music_tag_app_editing 字段的类
-            int resId = -1;
-            for (Class<?> clazz : getAllClasses(cl, "com.salt.music")) {
-                try {
-                    java.lang.reflect.Field field = clazz.getField("use_music_tag_app_editing");
-                    resId = field.getInt(null);
-                    Log.i(TAG, "Found use_music_tag_app_editing in " + clazz.getName() + " = " + resId);
-                    break;
-                } catch (NoSuchFieldException ignored) {
-                } catch (Throwable ignored) {
-                }
-            }
-
-            if (resId == -1) {
-                Log.w(TAG, "Could not find use_music_tag_app_editing field");
-                return;
-            }
-
-            final int targetResId = resId;
-
-            // Hook Context.getString(int)
+            // Hook Context.getString(int) - 动态查找资源 ID
             Method getString = android.content.Context.class.getMethod("getString", int.class);
             hook(getString).intercept(chain -> {
-                int id = (int) chain.getArgs().get(0);
-                String result = (String) chain.proceed();
-                if (id == targetResId && result != null && result.contains(OLD_APP_NAME)) {
-                    String replaced = result.replace(OLD_APP_NAME, NEW_APP_NAME);
-                    Log.d(TAG, ">>> getString replaced: " + result + " -> " + replaced);
-                    return replaced;
+                try {
+                    Context ctx = (Context) chain.getThisObject();
+                    if (ctx != null) {
+                        int targetId = ctx.getResources().getIdentifier(
+                                "use_music_tag_app_editing", "string", SALT_PKG);
+                        int id = (int) chain.getArgs().get(0);
+                        if (targetId != 0 && id == targetId) {
+                            String result = (String) chain.proceed();
+                            if (result != null && result.contains(OLD_APP_NAME)) {
+                                String replaced = result.replace(OLD_APP_NAME, NEW_APP_NAME);
+                                Log.d(TAG, ">>> getString replaced: " + result + " -> " + replaced);
+                                return replaced;
+                            }
+                            return result;
+                        }
+                    }
+                } catch (Throwable e) {
+                    Log.w(TAG, "getString hook error: " + e.getMessage());
                 }
-                return result;
+                return chain.proceed();
             });
 
-            Log.i(TAG, "Hook installed: Context.getString");
+            Log.i(TAG, "Hook installed: Context.getString (via getIdentifier)");
         } catch (Throwable e) {
             Log.e(TAG, "Failed to hook getString: " + e.getMessage(), e);
         }
-    }
-
-    private java.util.List<Class<?>> getAllClasses(ClassLoader cl, String packageName) {
-        java.util.List<Class<?>> result = new java.util.ArrayList<>();
-        try {
-            // 尝试常见的 R 类内部类名
-            String[] candidates = {
-                    packageName + ".R$string",
-                    packageName + ".R",
-                    "androidx.obf.R$string",
-                    "androidx.obf.R"
-            };
-            for (String name : candidates) {
-                try {
-                    Class<?> c = Class.forName(name, false, cl);
-                    result.add(c);
-                } catch (ClassNotFoundException ignored) {
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-        return result;
     }
 
     private void hookToast(ClassLoader cl) {
