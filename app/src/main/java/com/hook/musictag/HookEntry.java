@@ -204,13 +204,24 @@ public class HookEntry extends XposedModule {
         }
 
         Log.i(TAG, "REDIRECTING: " + OLD_PKG + " -> " + NEW_PKG);
+        Log.i(TAG, "  Action: " + intent.getAction());
+        Log.i(TAG, "  Data: " + intent.getData());
+        Log.i(TAG, "  Type: " + intent.getType());
+        Log.i(TAG, "  Flags: " + intent.getFlags());
 
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
-        if (intent.getData() != null && intent.getType() == null) {
+        // 确保 MIME type 为 audio/*
+        if (intent.getData() != null) {
             intent.setType("audio/*");
         }
 
         intent.addFlags(GRANT_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        Log.i(TAG, "  After redirect - Action: " + intent.getAction());
+        Log.i(TAG, "  After redirect - Data: " + intent.getData());
+        Log.i(TAG, "  After redirect - Type: " + intent.getType());
+        Log.i(TAG, "  After redirect - Component: " + intent.getComponent());
     }
 }
