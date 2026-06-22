@@ -8,13 +8,13 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class HookEntry implements IXposedHookLoadPackage {
 
-    private static final String TAG = "MusicTagHook";
+    private static final String TAG = "LyricoBridge";
     private static final String SALT_PKG = "com.salt.music";
     private static final String OLD_PKG = "com.xjcheng.musictageditor";
     private static final String OLD_CLASS = "com.xjcheng.musictageditor.SongDetailActivity";
@@ -31,17 +31,38 @@ public class HookEntry implements IXposedHookLoadPackage {
 
         Log.i(TAG, "Hooking SaltPlayer: " + lpparam.packageName);
 
+        XC_MethodHook hook = new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                handleIntent(param);
+            }
+        };
+
         XposedHelpers.findAndHookMethod(
                 "android.app.Activity",
                 lpparam.classLoader,
                 "startActivity",
                 Intent.class,
-                new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        handleIntent(param);
-                    }
-                }
+                hook
+        );
+
+        XposedHelpers.findAndHookMethod(
+                "android.app.Activity",
+                lpparam.classLoader,
+                "startActivityForResult",
+                Intent.class,
+                int.class,
+                hook
+        );
+
+        XposedHelpers.findAndHookMethod(
+                "android.app.Activity",
+                lpparam.classLoader,
+                "startActivityForResult",
+                Intent.class,
+                int.class,
+                android.os.Bundle.class,
+                hook
         );
 
         XposedHelpers.findAndHookMethod(
@@ -49,15 +70,10 @@ public class HookEntry implements IXposedHookLoadPackage {
                 lpparam.classLoader,
                 "startActivity",
                 Intent.class,
-                new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        handleIntent(param);
-                    }
-                }
+                hook
         );
 
-        Log.i(TAG, "Hook installed successfully");
+        Log.i(TAG, "Hook installed successfully - intercepting startActivity & startActivityForResult");
     }
 
     private void handleIntent(MethodHookParam param) {
@@ -90,7 +106,7 @@ public class HookEntry implements IXposedHookLoadPackage {
             return;
         }
 
-        Log.i(TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG);
+        Log.i(TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG + "/" + NEW_CLASS);
 
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
