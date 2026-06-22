@@ -14,6 +14,7 @@ public class HookEntry extends XposedModule {
 
     private static final String TAG = "LyricoBridge";
     private static final String SALT_PKG = "com.salt.music";
+    private static final String OLD_PKG = "com.xjcheng.musictageditor";
     private static final String NEW_PKG = "com.lonx.lyrico";
     private static final String NEW_CLASS = "com.lonx.lyrico.MainActivity";
 
@@ -214,7 +215,7 @@ public class HookEntry extends XposedModule {
         String cls = component.getClassName();
         Log.d(TAG, "Intent component: " + pkg + "/" + cls);
 
-        if (!SALT_PKG.equals(pkg)) return;
+        if (!OLD_PKG.equals(pkg)) return;
 
         Log.i(TAG, "REDIRECTING to " + NEW_PKG);
         Log.i(TAG, "  Action: " + intent.getAction());
