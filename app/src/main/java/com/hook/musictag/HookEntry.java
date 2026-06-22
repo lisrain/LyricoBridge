@@ -72,23 +72,29 @@ public class HookEntry extends XposedModule {
 
             hook(m1).intercept(chain -> {
                 Log.d(TAG, ">>> Intercepted startActivityForResult(Intent, int)");
-                handleIntent(chain);
+                boolean redirected = handleIntent(chain);
                 try {
                     return chain.proceed();
                 } catch (Throwable e) {
-                    Log.e(TAG, "startActivity failed: " + e.getMessage());
-                    return null;
+                    if (redirected) {
+                        Log.e(TAG, "Redirected startActivity failed: " + e.getMessage());
+                        return null;
+                    }
+                    throw e;
                 }
             });
 
             hook(m2).intercept(chain -> {
                 Log.d(TAG, ">>> Intercepted startActivityForResult(Intent, int, Bundle)");
-                handleIntent(chain);
+                boolean redirected = handleIntent(chain);
                 try {
                     return chain.proceed();
                 } catch (Throwable e) {
-                    Log.e(TAG, "startActivity failed: " + e.getMessage());
-                    return null;
+                    if (redirected) {
+                        Log.e(TAG, "Redirected startActivity failed: " + e.getMessage());
+                        return null;
+                    }
+                    throw e;
                 }
             });
 
@@ -100,22 +106,28 @@ public class HookEntry extends XposedModule {
                 Method m2 = android.app.Activity.class.getMethod("startActivityForResult", Intent.class, int.class, android.os.Bundle.class);
 
                 hook(m1).intercept(chain -> {
-                    handleIntent(chain);
+                    boolean redirected = handleIntent(chain);
                     try {
                         return chain.proceed();
                     } catch (Throwable e2) {
-                        Log.e(TAG, "startActivity failed: " + e2.getMessage());
-                        return null;
+                        if (redirected) {
+                            Log.e(TAG, "Redirected startActivity failed: " + e2.getMessage());
+                            return null;
+                        }
+                        throw e2;
                     }
                 });
 
                 hook(m2).intercept(chain -> {
-                    handleIntent(chain);
+                    boolean redirected = handleIntent(chain);
                     try {
                         return chain.proceed();
                     } catch (Throwable e2) {
-                        Log.e(TAG, "startActivity failed: " + e2.getMessage());
-                        return null;
+                        if (redirected) {
+                            Log.e(TAG, "Redirected startActivity failed: " + e2.getMessage());
+                            return null;
+                        }
+                        throw e2;
                     }
                 });
 
@@ -225,30 +237,25 @@ public class HookEntry extends XposedModule {
         return null;
     }
 
-    private void handleIntent(Chain chain) {
+    private boolean handleIntent(Chain chain) {
         List<Object> args = chain.getArgs();
-        if (args == null || args.isEmpty()) return;
+        if (args == null || args.isEmpty()) return false;
 
         Object arg0 = args.get(0);
-        if (!(arg0 instanceof Intent)) return;
+        if (!(arg0 instanceof Intent)) return false;
 
         Intent intent = (Intent) arg0;
         ComponentName component = intent.getComponent();
 
-        if (component == null) return;
+        if (component == null) return false;
 
         String pkg = component.getPackageName();
         String cls = component.getClassName();
         Log.d(TAG, "Intent component: " + pkg + "/" + cls);
 
-        if (!OLD_PKG.equals(pkg)) return;
+        if (!OLD_PKG.equals(pkg)) return false;
 
         Log.i(TAG, "REDIRECTING to " + NEW_PKG);
-        Log.i(TAG, "  Action: " + intent.getAction());
-        Log.i(TAG, "  Data: " + intent.getData());
-        Log.i(TAG, "  Type: " + intent.getType());
-        Log.i(TAG, "  Flags: " + intent.getFlags());
-
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
         if (intent.getData() != null) {
@@ -258,9 +265,6 @@ public class HookEntry extends XposedModule {
         intent.addFlags(GRANT_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        Log.i(TAG, "  After redirect - Action: " + intent.getAction());
-        Log.i(TAG, "  After redirect - Data: " + intent.getData());
-        Log.i(TAG, "  After redirect - Type: " + intent.getType());
-        Log.i(TAG, "  After redirect - Component: " + intent.getComponent());
+        return true;
     }
 }
