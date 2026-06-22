@@ -5,14 +5,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.util.Log;
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-public class HookEntry implements IXposedHookLoadPackage {
+import java.lang.reflect.Method;
+
+import io.github.libxposed.api.XposedModule;
+import io.github.libxposed.api.XposedModuleInterface;
+
+public class HookEntry extends XposedModule implements XposedModuleInterface {
 
     private static final String TAG = "LyricoBridge";
     private static final String SALT_PKG = "com.salt.music";
@@ -23,62 +22,42 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     private static final int GRANT_URI_PERMISSION = 0x00000001;
 
+    public HookEntry() {
+    }
+
     @Override
-    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-        if (!lpparam.packageName.equals(SALT_PKG)) {
+    public void onPackageLoaded(PackageLoadedParam param) {
+        if (!SALT_PKG.equals(param.getPackageName())) {
             return;
         }
 
-        Log.i(TAG, "Hooking SaltPlayer: " + lpparam.packageName);
+        log(TAG, "Hooking SaltPlayer: " + param.getPackageName());
 
-        XC_MethodHook hook = new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                handleIntent(param);
-            }
-        };
-
-        XposedHelpers.findAndHookMethod(
-                "android.app.Activity",
-                lpparam.classLoader,
-                "startActivity",
-                Intent.class,
-                hook
-        );
-
-        XposedHelpers.findAndHookMethod(
-                "android.app.Activity",
-                lpparam.classLoader,
-                "startActivityForResult",
-                Intent.class,
-                int.class,
-                hook
-        );
-
-        XposedHelpers.findAndHookMethod(
-                "android.app.Activity",
-                lpparam.classLoader,
-                "startActivityForResult",
-                Intent.class,
-                int.class,
-                android.os.Bundle.class,
-                hook
-        );
-
-        XposedHelpers.findAndHookMethod(
-                "android.content.ContextWrapper",
-                lpparam.classLoader,
-                "startActivity",
-                Intent.class,
-                hook
-        );
-
-        Log.i(TAG, "Hook installed successfully - intercepting startActivity & startActivityForResult");
+        try {
+            hook(Activity.class.getMethod("startActivity", Intent.class));
+            hook(Activity.class.getMethod("startActivityForResult", Intent.class, int.class));
+            hook(Activity.class.getMethod("startActivityForResult", Intent.class, int.class, android.os.Bundle.class));
+            log(TAG, "Hook installed successfully on Activity methods");
+        } catch (NoSuchMethodException e) {
+            log(TAG, "Failed to find method: " + e.getMessage());
+        }
     }
 
-    private void handleIntent(MethodHookParam param) {
-        Intent intent = (Intent) param.args[0];
-        if (intent == null) return;
+    private void hook(Method method) {
+        hook(method).intercept(chain -> {
+            handleIntent(chain);
+            return chain.proceed();
+        });
+    }
+
+    private void handleIntent(Chain chain) {
+        Object[] args = chain.getArgs();
+        if (args == null || args.length == 0) return;
+
+        Object arg0 = args[0];
+        if (!(arg0 instanceof Intent)) return;
+
+        Intent intent = (Intent) arg0;
 
         ComponentName component = intent.getComponent();
         if (component == null) return;
@@ -86,13 +65,12 @@ public class HookEntry implements IXposedHookLoadPackage {
         if (!OLD_PKG.equals(component.getPackageName())) return;
         if (!OLD_CLASS.equals(component.getClassName())) return;
 
-        Context context = null;
-        if (param.thisObject instanceof Context) {
-            context = (Context) param.thisObject;
-        }
-        if (context == null) return;
+        Object thisObj = chain.getThisObject();
+        if (!(thisObj instanceof Context)) return;
 
+        Context context = (Context) thisObj;
         PackageManager pm = context.getPackageManager();
+
         boolean oldAppInstalled;
         try {
             pm.getPackageInfo(OLD_PKG, 0);
@@ -102,11 +80,11 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
 
         if (oldAppInstalled) {
-            Log.i(TAG, OLD_PKG + " is installed, using original intent");
+            log(TAG, OLD_PKG + " is installed, using original intent");
             return;
         }
 
-        Log.i(TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG + "/" + NEW_CLASS);
+        log(TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG + "/" + NEW_CLASS);
 
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 

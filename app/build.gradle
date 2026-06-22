@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace 'com.hook.musictag'
-    compileSdk 34
+    compileSdk 37
+    buildToolsVersion "37.0.0"
 
     defaultConfig {
         applicationId "com.hook.musictag"
@@ -15,19 +16,32 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
+    signingConfigs {
+        release {
+            storeFile file("testkey.jks")
+            storePassword "testkey"
+            keyAlias "testkey"
+            keyPassword "testkey"
+        }
+    }
+
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
-    compileOnly 'de.robv.android.xposed:api:82'
-    compileOnly 'de.robv.android.xposed:api:82:sources'
+    compileOnly 'io.github.libxposed:api:102.0.0'
+    compileOnly 'io.github.libxposed:annotation:1.0.0'
 }
