@@ -77,7 +77,7 @@ public class HookEntry extends XposedModule {
                     return chain.proceed();
                 } catch (Throwable e) {
                     if (redirected) {
-                        Log.e(TAG, "Redirected startActivity failed: " + e.getMessage());
+                        showRedirectFailedToast(chain.getThisObject());
                         return null;
                     }
                     throw e;
@@ -91,7 +91,7 @@ public class HookEntry extends XposedModule {
                     return chain.proceed();
                 } catch (Throwable e) {
                     if (redirected) {
-                        Log.e(TAG, "Redirected startActivity failed: " + e.getMessage());
+                        showRedirectFailedToast(chain.getThisObject());
                         return null;
                     }
                     throw e;
@@ -111,7 +111,7 @@ public class HookEntry extends XposedModule {
                         return chain.proceed();
                     } catch (Throwable e2) {
                         if (redirected) {
-                            Log.e(TAG, "Redirected startActivity failed: " + e2.getMessage());
+                            showRedirectFailedToast(chain.getThisObject());
                             return null;
                         }
                         throw e2;
@@ -124,7 +124,7 @@ public class HookEntry extends XposedModule {
                         return chain.proceed();
                     } catch (Throwable e2) {
                         if (redirected) {
-                            Log.e(TAG, "Redirected startActivity failed: " + e2.getMessage());
+                            showRedirectFailedToast(chain.getThisObject());
                             return null;
                         }
                         throw e2;
@@ -135,6 +135,15 @@ public class HookEntry extends XposedModule {
             } catch (Throwable e2) {
                 Log.e(TAG, "Fallback also failed: " + e2.getMessage(), e2);
             }
+        }
+    }
+
+    private void showRedirectFailedToast(Object activity) {
+        if (activity instanceof android.content.Context) {
+            android.widget.Toast.makeText(
+                    (android.content.Context) activity,
+                    "未找到" + NEW_APP_NAME + "应用，请前往应用市场下载",
+                    android.widget.Toast.LENGTH_LONG).show();
         }
     }
 
