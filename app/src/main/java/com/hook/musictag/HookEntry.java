@@ -73,13 +73,23 @@ public class HookEntry extends XposedModule {
             hook(m1).intercept(chain -> {
                 Log.d(TAG, ">>> Intercepted startActivityForResult(Intent, int)");
                 handleIntent(chain);
-                return chain.proceed();
+                try {
+                    return chain.proceed();
+                } catch (Throwable e) {
+                    Log.e(TAG, "startActivity failed: " + e.getMessage());
+                    return null;
+                }
             });
 
             hook(m2).intercept(chain -> {
                 Log.d(TAG, ">>> Intercepted startActivityForResult(Intent, int, Bundle)");
                 handleIntent(chain);
-                return chain.proceed();
+                try {
+                    return chain.proceed();
+                } catch (Throwable e) {
+                    Log.e(TAG, "startActivity failed: " + e.getMessage());
+                    return null;
+                }
             });
 
             Log.i(TAG, "Hook installed: ComponentActivity.startActivityForResult");
@@ -91,12 +101,22 @@ public class HookEntry extends XposedModule {
 
                 hook(m1).intercept(chain -> {
                     handleIntent(chain);
-                    return chain.proceed();
+                    try {
+                        return chain.proceed();
+                    } catch (Throwable e2) {
+                        Log.e(TAG, "startActivity failed: " + e2.getMessage());
+                        return null;
+                    }
                 });
 
                 hook(m2).intercept(chain -> {
                     handleIntent(chain);
-                    return chain.proceed();
+                    try {
+                        return chain.proceed();
+                    } catch (Throwable e2) {
+                        Log.e(TAG, "startActivity failed: " + e2.getMessage());
+                        return null;
+                    }
                 });
 
                 Log.i(TAG, "Fallback hook installed: Activity.startActivityForResult");
