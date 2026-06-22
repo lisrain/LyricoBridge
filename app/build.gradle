@@ -4,8 +4,7 @@ plugins {
 
 android {
     namespace 'com.hook.musictag'
-    compileSdk 37
-    buildToolsVersion "37.0.0"
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.hook.musictag"
