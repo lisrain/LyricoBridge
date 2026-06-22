@@ -2,6 +2,15 @@
 
 Xposed 模块，将椒盐音乐（SaltPlayer）的「使用音乐标签应用编辑」功能重定向到 Lyrico。
 
+## 相关软件
+
+- **椒盐音乐（SaltPlayer）** — 一款优秀的本地音乐播放器
+  - 官网：https://moriafly.com/program/salt-player.html
+  - 酷安：https://www.coolapk.com/apk/com.salt.music
+  - GitHub：https://github.com/Moriafly/SaltPlayerSource
+- **Lyrico** — 一款面向 Android 的开源本地音乐标签编辑与歌词管理工具
+  - GitHub：https://github.com/Replica0110/Lyrico
+
 ## 功能
 
 - 将椒盐音乐中「使用音乐标签应用编辑」的跳转目标重定向到 Lyrico
