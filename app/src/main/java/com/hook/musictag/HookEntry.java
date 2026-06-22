@@ -151,9 +151,8 @@ public class HookEntry extends XposedModule {
 
     private String doReplace(String str) {
         if (!str.contains(OLD_APP_NAME)) return null;
-        String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
-        replaced = replaced.replaceAll("[\u2026.]+$", "");
-        return replaced;
+        return str.replace(OLD_APP_NAME + "应用", NEW_APP_NAME)
+                .replaceAll("[\u2026.]+$", "") + "...";
     }
 
     private Object replaceIfNeeded(Object result) {
