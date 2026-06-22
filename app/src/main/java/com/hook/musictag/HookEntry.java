@@ -134,8 +134,8 @@ public class HookEntry extends XposedModule {
                 Object arg = chain.getArgs().get(0);
                 if (arg instanceof CharSequence) {
                     String str = arg.toString();
-                    if (str.contains(OLD_APP_NAME)) {
-                        String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
+                    String replaced = doReplace(str);
+                    if (replaced != null) {
                         Log.d(TAG, ">>> TextView.setText replaced: " + str + " -> " + replaced);
                         return chain.proceedWith(chain.getThisObject(), new Object[]{replaced});
                     }
@@ -149,18 +149,25 @@ public class HookEntry extends XposedModule {
         }
     }
 
+    private String doReplace(String str) {
+        if (!str.contains(OLD_APP_NAME)) return null;
+        String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
+        replaced = replaced.replaceAll("[\u2026.]+$", "");
+        return replaced;
+    }
+
     private Object replaceIfNeeded(Object result) {
         if (result instanceof String) {
             String str = (String) result;
-            if (str.contains(OLD_APP_NAME)) {
-                String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
+            String replaced = doReplace(str);
+            if (replaced != null) {
                 Log.d(TAG, ">>> String replaced: " + str + " -> " + replaced);
                 return replaced;
             }
         } else if (result instanceof CharSequence) {
             String str = result.toString();
-            if (str.contains(OLD_APP_NAME)) {
-                String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
+            String replaced = doReplace(str);
+            if (replaced != null) {
                 Log.d(TAG, ">>> CharSequence replaced: " + str + " -> " + replaced);
                 return replaced;
             }
@@ -183,8 +190,8 @@ public class HookEntry extends XposedModule {
                         Object arg = chain.getArgs().get(0);
                         if (arg instanceof String) {
                             String text = (String) arg;
-                            if (text.contains(OLD_APP_NAME)) {
-                                String replaced = text.replace(OLD_APP_NAME, NEW_APP_NAME);
+                            String replaced = doReplace(text);
+                            if (replaced != null) {
                                 Log.d(TAG, ">>> Toast replaced: " + text + " -> " + replaced);
                                 return chain.proceedWith(chain.getThisObject(), new Object[]{replaced});
                             }
