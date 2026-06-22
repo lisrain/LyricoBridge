@@ -1,6 +1,5 @@
 package com.hook.musictag;
 
-import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -36,29 +35,35 @@ public class HookEntry extends XposedModule implements XposedModuleInterface {
         log(Log.INFO, TAG, "Hooking SaltPlayer: " + param.getPackageName());
 
         try {
-            Method m1 = Activity.class.getMethod("startActivity", Intent.class);
-            Method m2 = Activity.class.getMethod("startActivityForResult", Intent.class, int.class);
-            Method m3 = Activity.class.getMethod("startActivityForResult", Intent.class, int.class, android.os.Bundle.class);
+            Class<?> componentActivityClass = Class.forName(
+                    "androidx.activity.ComponentActivity",
+                    false,
+                    param.getDefaultClassLoader()
+            );
 
-            hook(m1).intercept(chain -> {
-                handleIntent(chain);
-                return chain.proceed();
-            });
+            hookMethod(componentActivityClass, "startActivityForResult", Intent.class, int.class);
+            hookMethod(componentActivityClass, "startActivityForResult", Intent.class, int.class, android.os.Bundle.class);
 
-            hook(m2).intercept(chain -> {
-                handleIntent(chain);
-                return chain.proceed();
-            });
-
-            hook(m3).intercept(chain -> {
-                handleIntent(chain);
-                return chain.proceed();
-            });
-
-            log(Log.INFO, TAG, "Hook installed successfully on Activity methods");
-        } catch (NoSuchMethodException e) {
-            log(Log.ERROR, TAG, "Failed to find method: " + e.getMessage());
+            log(Log.INFO, TAG, "Hook installed on ComponentActivity");
+        } catch (Throwable e) {
+            log(Log.ERROR, TAG, "Failed to hook ComponentActivity: " + e.getMessage());
+            try {
+                hookMethod(android.app.Activity.class, "startActivityForResult", Intent.class, int.class);
+                hookMethod(android.app.Activity.class, "startActivityForResult", Intent.class, int.class, android.os.Bundle.class);
+                log(Log.INFO, TAG, "Fallback: hook installed on Activity");
+            } catch (Throwable e2) {
+                log(Log.ERROR, TAG, "Fallback also failed: " + e2.getMessage());
+            }
         }
+    }
+
+    private void hookMethod(Class<?> clazz, String methodName, Class<?>... paramTypes) throws NoSuchMethodException {
+        Method method = clazz.getMethod(methodName, paramTypes);
+        hook(method).intercept(chain -> {
+            log(Log.DEBUG, TAG, "Intercepted: " + chain.getExecutable().getName());
+            handleIntent(chain);
+            return chain.proceed();
+        });
     }
 
     private void handleIntent(Chain chain) {
@@ -69,9 +74,15 @@ public class HookEntry extends XposedModule implements XposedModuleInterface {
         if (!(arg0 instanceof Intent)) return;
 
         Intent intent = (Intent) arg0;
+        log(Log.DEBUG, TAG, "Intent: " + intent);
 
         ComponentName component = intent.getComponent();
-        if (component == null) return;
+        if (component == null) {
+            log(Log.DEBUG, TAG, "No component in intent");
+            return;
+        }
+
+        log(Log.DEBUG, TAG, "Component: " + component.flattenToString());
 
         if (!OLD_PKG.equals(component.getPackageName())) return;
         if (!OLD_CLASS.equals(component.getClassName())) return;
@@ -91,11 +102,11 @@ public class HookEntry extends XposedModule implements XposedModuleInterface {
         }
 
         if (oldAppInstalled) {
-            log(Log.INFO, TAG, OLD_PKG + " is installed, using original intent");
+            log(Log.INFO, TAG, OLD_PKG + " is installed, keeping original");
             return;
         }
 
-        log(Log.INFO, TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG + "/" + NEW_CLASS);
+        log(Log.INFO, TAG, "Redirecting: " + OLD_PKG + " -> " + NEW_PKG);
 
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
