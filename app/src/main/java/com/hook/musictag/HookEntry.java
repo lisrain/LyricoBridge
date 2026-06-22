@@ -176,33 +176,33 @@ public class HookEntry extends XposedModule {
 
     private void hookToast(ClassLoader cl) {
         try {
-            // Hook vo3 的静态 toast 方法 (showToast / showMessage)
-            // 根据分析，vo3.m6473(String) 是显示 toast 的方法
-            Class<?> vo3Class = Class.forName("androidx.obf.vo3", false, cl);
-
-            // 找到接受 String 参数的静态方法
-            for (Method m : vo3Class.getDeclaredMethods()) {
-                if (m.getParameterCount() == 1
-                        && m.getParameterTypes()[0] == String.class
-                        && java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
-                    hook(m).intercept(chain -> {
-                        Object arg = chain.getArgs().get(0);
-                        if (arg instanceof String) {
-                            String text = (String) arg;
-                            String replaced = doReplace(text);
-                            if (replaced != null) {
-                                Log.d(TAG, ">>> Toast replaced: " + text + " -> " + replaced);
-                                return chain.proceedWith(chain.getThisObject(), new Object[]{replaced});
-                            }
-                        }
-                        return chain.proceed();
-                    });
-                    Log.i(TAG, "Hook installed: vo3." + m.getName() + "(String)");
+            // Hook android.widget.Toast.makeText - standard Android API, won't be obfuscated
+            Method makeText = android.widget.Toast.class.getMethod("makeText",
+                    android.content.Context.class, CharSequence.class, int.class);
+            hook(makeText).intercept(chain -> {
+                CharSequence msg = (CharSequence) chain.getArgs().get(1);
+                if (msg != null) {
+                    String text = msg.toString();
+                    String replaced = doReplaceToast(text);
+                    if (replaced != null) {
+                        Log.d(TAG, ">>> Toast replaced: " + text + " -> " + replaced);
+                        return chain.proceedWith(chain.getThisObject(),
+                                new Object[]{chain.getArgs().get(0), replaced, chain.getArgs().get(2)});
+                    }
                 }
-            }
+                return chain.proceed();
+            });
+            Log.i(TAG, "Hook installed: Toast.makeText");
         } catch (Throwable e) {
-            Log.e(TAG, "Failed to hook vo3 toast: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to hook Toast.makeText: " + e.getMessage(), e);
         }
+    }
+
+    private String doReplaceToast(String text) {
+        if (text.contains(OLD_APP_NAME)) {
+            return text.replace(OLD_APP_NAME, NEW_APP_NAME);
+        }
+        return null;
     }
 
     private void handleIntent(Chain chain) {
