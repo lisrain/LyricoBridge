@@ -110,49 +110,25 @@ public class HookEntry extends XposedModule {
 
     private void hookGetString(ClassLoader cl) {
         try {
-            // Hook Context.getString(int)
-            Method m1 = android.content.Context.class.getMethod("getString", int.class);
-            hook(m1).intercept(chain -> replaceIfNeeded(chain.proceed()));
+            // Hook TextView.setText(CharSequence) - 拦截所有文本设置
+            Method setText = android.widget.TextView.class.getMethod("setText", CharSequence.class);
+            hook(setText).intercept(chain -> {
+                Object arg = chain.getArgs().get(0);
+                if (arg instanceof CharSequence) {
+                    String str = arg.toString();
+                    if (str.contains(OLD_APP_NAME)) {
+                        String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
+                        Log.d(TAG, ">>> TextView.setText replaced: " + str + " -> " + replaced);
+                        return chain.proceedWith(chain.getThisObject(), new Object[]{replaced});
+                    }
+                }
+                return chain.proceed();
+            });
 
-            // Hook Context.getString(int, Object...)
-            Method m2 = android.content.Context.class.getMethod("getString", int.class, Object[].class);
-            hook(m2).intercept(chain -> replaceIfNeeded(chain.proceed()));
-
-            // Hook Resources.getString(int)
-            Method m3 = android.content.res.Resources.class.getMethod("getString", int.class);
-            hook(m3).intercept(chain -> replaceIfNeeded(chain.proceed()));
-
-            // Hook Resources.getString(int, Object...)
-            Method m4 = android.content.res.Resources.class.getMethod("getString", int.class, Object[].class);
-            hook(m4).intercept(chain -> replaceIfNeeded(chain.proceed()));
-
-            // Hook Resources.getText(int)
-            Method m5 = android.content.res.Resources.class.getMethod("getText", int.class);
-            hook(m5).intercept(chain -> replaceIfNeeded(chain.proceed()));
-
-            Log.i(TAG, "Hook installed: getString/getText (all variants)");
+            Log.i(TAG, "Hook installed: TextView.setText");
         } catch (Throwable e) {
-            Log.e(TAG, "Failed to hook getString: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to hook TextView.setText: " + e.getMessage(), e);
         }
-    }
-
-    private Object replaceIfNeeded(Object result) {
-        if (result instanceof String) {
-            String str = (String) result;
-            if (str.contains(OLD_APP_NAME)) {
-                String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
-                Log.d(TAG, ">>> String replaced: " + str + " -> " + replaced);
-                return replaced;
-            }
-        } else if (result instanceof CharSequence) {
-            String str = result.toString();
-            if (str.contains(OLD_APP_NAME)) {
-                String replaced = str.replace(OLD_APP_NAME, NEW_APP_NAME);
-                Log.d(TAG, ">>> CharSequence replaced: " + str + " -> " + replaced);
-                return replaced;
-            }
-        }
-        return result;
     }
 
     private void hookToast(ClassLoader cl) {
