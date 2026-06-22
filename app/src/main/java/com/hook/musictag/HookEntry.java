@@ -5,8 +5,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.util.Log;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
@@ -31,30 +33,39 @@ public class HookEntry extends XposedModule implements XposedModuleInterface {
             return;
         }
 
-        log(TAG, "Hooking SaltPlayer: " + param.getPackageName());
+        log(Log.INFO, TAG, "Hooking SaltPlayer: " + param.getPackageName());
 
         try {
-            hook(Activity.class.getMethod("startActivity", Intent.class));
-            hook(Activity.class.getMethod("startActivityForResult", Intent.class, int.class));
-            hook(Activity.class.getMethod("startActivityForResult", Intent.class, int.class, android.os.Bundle.class));
-            log(TAG, "Hook installed successfully on Activity methods");
+            Method m1 = Activity.class.getMethod("startActivity", Intent.class);
+            Method m2 = Activity.class.getMethod("startActivityForResult", Intent.class, int.class);
+            Method m3 = Activity.class.getMethod("startActivityForResult", Intent.class, int.class, android.os.Bundle.class);
+
+            hook(m1).intercept(chain -> {
+                handleIntent(chain);
+                return chain.proceed();
+            });
+
+            hook(m2).intercept(chain -> {
+                handleIntent(chain);
+                return chain.proceed();
+            });
+
+            hook(m3).intercept(chain -> {
+                handleIntent(chain);
+                return chain.proceed();
+            });
+
+            log(Log.INFO, TAG, "Hook installed successfully on Activity methods");
         } catch (NoSuchMethodException e) {
-            log(TAG, "Failed to find method: " + e.getMessage());
+            log(Log.ERROR, TAG, "Failed to find method: " + e.getMessage());
         }
     }
 
-    private void hook(Method method) {
-        hook(method).intercept(chain -> {
-            handleIntent(chain);
-            return chain.proceed();
-        });
-    }
-
     private void handleIntent(Chain chain) {
-        Object[] args = chain.getArgs();
-        if (args == null || args.length == 0) return;
+        List<Object> args = chain.getArgs();
+        if (args == null || args.isEmpty()) return;
 
-        Object arg0 = args[0];
+        Object arg0 = args.get(0);
         if (!(arg0 instanceof Intent)) return;
 
         Intent intent = (Intent) arg0;
@@ -80,11 +91,11 @@ public class HookEntry extends XposedModule implements XposedModuleInterface {
         }
 
         if (oldAppInstalled) {
-            log(TAG, OLD_PKG + " is installed, using original intent");
+            log(Log.INFO, TAG, OLD_PKG + " is installed, using original intent");
             return;
         }
 
-        log(TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG + "/" + NEW_CLASS);
+        log(Log.INFO, TAG, OLD_PKG + " not found, redirecting to " + NEW_PKG + "/" + NEW_CLASS);
 
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
