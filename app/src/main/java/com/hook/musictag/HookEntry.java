@@ -142,7 +142,7 @@ public class HookEntry extends XposedModule {
         if (activity instanceof android.content.Context) {
             android.widget.Toast.makeText(
                     (android.content.Context) activity,
-                    "未找到" + NEW_APP_NAME + "应用，请前往应用市场下载",
+                    "未找到【" + NEW_APP_NAME + "】应用，请前往GitHub下载",
                     android.widget.Toast.LENGTH_LONG).show();
         }
     }
@@ -217,25 +217,25 @@ public class HookEntry extends XposedModule {
 
     private void hookToast(ClassLoader cl) {
         try {
-            // Hook android.widget.Toast.makeText - standard Android API, won't be obfuscated
-            Method makeText = android.widget.Toast.class.getMethod("makeText",
-                    android.content.Context.class, CharSequence.class, int.class);
-            hook(makeText).intercept(chain -> {
-                CharSequence msg = (CharSequence) chain.getArgs().get(1);
-                if (msg != null) {
-                    String text = msg.toString();
-                    String replaced = doReplaceToast(text);
-                    if (replaced != null) {
-                        Log.d(TAG, ">>> Toast replaced: " + text + " -> " + replaced);
-                        return chain.proceedWith(chain.getThisObject(),
-                                new Object[]{chain.getArgs().get(0), replaced, chain.getArgs().get(2)});
-                    }
+            Class<?> vo3Class = Class.forName("androidx.obf.vo3", false, cl);
+            for (Method m : vo3Class.getDeclaredMethods()) {
+                if (m.getParameterCount() == 1
+                        && m.getParameterTypes()[0] == String.class
+                        && java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
+                    hook(m).intercept(chain -> {
+                        String text = (String) chain.getArgs().get(0);
+                        String replaced = doReplaceToast(text);
+                        if (replaced != null) {
+                            Log.d(TAG, ">>> Toast replaced: " + text + " -> " + replaced);
+                            return chain.proceedWith(chain.getThisObject(), new Object[]{replaced});
+                        }
+                        return chain.proceed();
+                    });
+                    Log.i(TAG, "Hook installed: vo3." + m.getName() + "(String)");
                 }
-                return chain.proceed();
-            });
-            Log.i(TAG, "Hook installed: Toast.makeText");
+            }
         } catch (Throwable e) {
-            Log.e(TAG, "Failed to hook Toast.makeText: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to hook vo3 toast: " + e.getMessage(), e);
         }
     }
 
