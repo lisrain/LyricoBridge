@@ -10,16 +10,10 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="@string/module_description" />
+            android:value="Redirect SaltPlayer music tag share to Lyrico" />
         <meta-data
             android:name="xposedminversion"
-            android:value="102" />
-        <meta-data
-            android:name="xposedscope"
-            android:resource="@array/xposed_scope" />
-        <meta-data
-            android:name="xposedentryclass"
-            android:value="com.hook.musictag.HookEntry" />
+            android:value="93" />
 
     </application>
 

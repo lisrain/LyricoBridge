@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Generate testkey
@@ -33,9 +33,9 @@ jobs:
             -dname "CN=LyricoBridge, OU=Test, O=Test, L=Test, ST=Test, C=US"
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '8.9'
+          gradle-version: '9.5.1'
 
       - name: Build Debug APK
         run: gradle assembleDebug
@@ -44,13 +44,13 @@ jobs:
         run: gradle assembleRelease
 
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: LyricoBridge-debug
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload Release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: LyricoBridge-release
           path: app/build/outputs/apk/release/*.apk

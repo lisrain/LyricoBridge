@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LyricoBridge</string>
-    <string name="module_description">Fix SaltPlayer music tag share intent - redirects SongDetailActivity to MainActivity</string>
-    <string-array name="xposed_scope">
-        <item>com.salt.music</item>
-    </string-array>
 </resources>
