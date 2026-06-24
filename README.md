@@ -22,6 +22,7 @@ Xposed 模块，将椒盐音乐（SaltPlayer）的「使用音乐标签应用编
 - LSPosed 2.0+（支持 libxposed API 101）
 - 椒盐音乐已安装
 - Lyrico 已安装
+- （嗯...Root和LSPosed其实不是必须项，但你得自行解决签名校验问题）
 
 ## 安装
 
