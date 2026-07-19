@@ -43,14 +43,23 @@ jobs:
 
       - name: Update version in build.gradle
         run: |
-          sed -i "s/versionCode [0-9]*/versionCode ${{ steps.version.outputs.version_code }}/" app/build.gradle
-          sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version_name }}\"/" app/build.gradle
+          VERSION_CODE=${{ steps.version.outputs.version_code }}
+          VERSION_NAME=${{ steps.version.outputs.version_name }}
+          awk -v code="$VERSION_CODE" -v name="$VERSION_NAME" '
+            /versionCode/ { gsub(/[0-9]+/, code); }
+            /versionName/ { gsub(/"[^"]*"/, "\"" name "\""); }
+            { print }
+          ' app/build.gradle > app/build.gradle.tmp
+          mv app/build.gradle.tmp app/build.gradle
+          echo "Updated to version $VERSION_NAME (code $VERSION_CODE)"
+          grep -E "versionCode|versionName" app/build.gradle
 
       - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/build.gradle
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore: bump version to ${{ steps.version.outputs.version_name }}"
           git push
 
