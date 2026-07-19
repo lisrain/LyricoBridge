@@ -53,6 +53,9 @@ public class HookEntry extends XposedModule {
 
         // Hook 3: vo3 toast 方法 - 修改硬编码 toast
         hookToast(cl);
+
+        // Hook 4: sg1.mo4958 (parseResult) - 强制 RESULT_OK 触发刷新
+        hookParseResult(cl);
     }
 
     @Override
@@ -246,6 +249,69 @@ public class HookEntry extends XposedModule {
         return null;
     }
 
+    /**
+     * Hook sg1.mo4958 (ActivityResultContract.parseResult)
+     * 强制 resultCode = -1 (RESULT_OK)，触发封面刷新
+     *
+     * 原逻辑：if (resultCode != -1 || intent == null) return false;
+     *         else launch r01 coroutine (refresh cover)
+     *
+     * Hook 后：每次调用都把 resultCode 改成 -1，条件自然通过
+     */
+    private void hookParseResult(ClassLoader cl) {
+        try {
+            Class<?> sg1Class = Class.forName("androidx.obf.sg1", false, cl);
+
+            // 动态查找 (int, Intent) -> Object 方法
+            Method targetMethod = null;
+            for (Method m : sg1Class.getDeclaredMethods()) {
+                Class<?>[] params = m.getParameterTypes();
+                if (params.length == 2 && params[0] == int.class && params[1] == Intent.class
+                        && m.getReturnType() == Object.class) {
+                    targetMethod = m;
+                    break;
+                }
+            }
+
+            if (targetMethod == null) {
+                Log.e(TAG, "Could not find parseResult method in sg1");
+                for (Method m : sg1Class.getDeclaredMethods()) {
+                    Log.d(TAG, "  sg1 method: " + m.getName() + " params=" + java.util.Arrays.toString(m.getParameterTypes()));
+                }
+                return;
+            }
+
+            targetMethod.setAccessible(true);
+            final Class<?> finalSg1Class = sg1Class;
+            final Method parseResult = targetMethod;
+            final ClassLoader finalCl = cl;
+
+            hook(parseResult).intercept(chain -> {
+                try {
+                    int resultCode = (int) chain.getArgs().get(0);
+                    // 只在 resultCode 不是 -1 时修改
+                    if (resultCode != -1) {
+                        Log.d(TAG, ">>> sg1." + parseResult.getName() + ": resultCode=" + resultCode + " -> forcing to -1");
+                        // 直接调用原始方法，传入修改后的参数
+                        Object result = parseResult.invoke(chain.getThisObject(), -1, chain.getArgs().get(1) != null ? chain.getArgs().get(1) : new Intent());
+                        Log.d(TAG, ">>> sg1." + parseResult.getName() + " returned: " + result);
+                        return result;
+                    }
+                    // resultCode 已经是 -1，正常执行
+                    return chain.proceed();
+                } catch (Throwable e) {
+                    Log.e(TAG, ">>> sg1 THREW: " + e.getClass().getName() + ": " + e.getMessage());
+                    Log.e(TAG, ">>> STACKTRACE: " + android.util.Log.getStackTraceString(e));
+                    return Boolean.TRUE;
+                }
+            });
+
+            Log.i(TAG, "Hook installed: sg1." + parseResult.getName() + " (force RESULT_OK + scan)");
+        } catch (Throwable e) {
+            Log.e(TAG, "Failed to hook sg1.parseResult: " + e.getMessage(), e);
+        }
+    }
+
     private boolean handleIntent(Chain chain) {
         List<Object> args = chain.getArgs();
         if (args == null || args.isEmpty()) return false;
@@ -267,12 +333,13 @@ public class HookEntry extends XposedModule {
         Log.i(TAG, "REDIRECTING to " + NEW_PKG);
         intent.setComponent(new ComponentName(NEW_PKG, NEW_CLASS));
 
+
+
         if (intent.getData() != null) {
             intent.setDataAndType(intent.getData(), "audio/*");
         }
 
         intent.addFlags(GRANT_URI_PERMISSION);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         return true;
     }
