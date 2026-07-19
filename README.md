@@ -15,6 +15,7 @@ Xposed 模块，将椒盐音乐（SaltPlayer）的「使用音乐标签应用编
 
 - 将椒盐音乐中「使用音乐标签应用编辑」的跳转目标重定向到 Lyrico
 - 自动补全 intent 的 MIME type（`audio/*`）和 URI 读取权限，确保 Lyrico 能正确打开音频文件
+- **编辑后自动刷新**：从 Lyrico 返回椒盐音乐后，自动刷新歌曲封面和元数据，无需手动切歌
 
 ## 环境要求
 
@@ -31,11 +32,20 @@ Xposed 模块，将椒盐音乐（SaltPlayer）的「使用音乐标签应用编
 3. 勾选作用域：`com.salt.music`
 4. 重启椒盐音乐
 
+## 使用
+
+1. 在椒盐音乐中选择一首歌曲
+2. 点击「使用 Lyrico 编辑...」
+3. 在 Lyrico 中编辑标签、封面、歌词等
+4. 保存并返回椒盐音乐
+5. 歌曲信息会自动刷新 ✅
+
 ## 构建
 
 ```bash
 # 需要 JDK 21 + Gradle 9.5.1
-gradle assembleRelease
+gradle assembleDebug   # Debug 版本
+gradle assembleRelease # Release 版本
 ```
 
 或直接 fork 本仓库，GitHub Actions 会自动编译。
